@@ -2,7 +2,21 @@
 
 ## Current stage
 
-Completed an initial local tracing experiment: a Spring Boot `/hello` request was recorded by the OpenTelemetry Java agent and viewed in Jaeger. Operations, spans, timing, server/client roles, context propagation, and exporting have been discussed. Cross-service propagation and child spans have not yet been exercised. No upstream investigation or contribution has been recorded.
+Observed incoming HTTP and outgoing HTTP client spans in Jaeger. The application now makes two sequential calls to Postman Echo, producing sibling child spans. An echoed `traceparent` was matched to the outgoing client span in the one-call version. Receiving-side span creation in another instrumented service has not been exercised. No upstream investigation or contribution has been recorded.
+
+## 2026-11-18 — Outgoing HTTP spans and context propagation
+
+**Goal:** Observe a real child span, verify propagated context, and test sequential span relationships.
+
+**Work completed:** Changed `HelloController.hello()` to call Postman Echo using Java `HttpClient`, first once and then twice sequentially. The endpoint returns the second response body. Inspected the external host attribute, matched an echoed header to a client span, and observed two sibling spans. Imported the Maven project using **Java: Import Java Projects into Workspace** after VS Code reported that the controller was outside the classpath.
+
+**Verification:** The developer reported `./mvnw package` succeeded and confirmed the updated endpoint response. A one-call trace screenshot showed client SpanID `dba19004546330ae`, matching the supplied `traceparent` header. The final screenshot showed three spans: the 709 ms parent and sequential 402 ms and 201 ms client spans, both HTTP 200 and targeting `postman-echo.com`. An earlier two-span result prompted a rebuild/restart check; the subsequent result showed three. No builds or runtime checks were rerun during the documentation update, and individual test results were not supplied.
+
+**Learning:** The agent instruments supported HTTP client operations, not arbitrary Java statements. Sequential calls use the restored parent context and become siblings. Parent elapsed time includes child time. Echoing trace context verifies header receipt but provides no external server spans.
+
+**Open questions:** The two-call response should carry the second client's span ID; this comparison remains unverified. Explicit span kind, cross-thread propagation, receiving-side context extraction, manual spans, and Byte Buddy internals remain unexplored. No upstream issue has been selected.
+
+**Single next action:** For one new `/hello` request, compare the echoed `traceparent` span ID with the second HTTP client span in Jaeger.
 
 ## 2026-11-18 — First local trace and context propagation fundamentals
 

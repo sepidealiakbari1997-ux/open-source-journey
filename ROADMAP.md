@@ -4,7 +4,7 @@ This journal tracks learning and progress toward meaningful open-source contribu
 
 ## Current position — 2026-11-18
 
-Core tracing concepts have been discussed, and the first local HTTP trace has been observed in Jaeger. See [learning notes](projects/otel/learning-notes.md) and the [reproducible experiment](projects/otel/experiments.md). Cross-service propagation is understood conceptually but has not been tested. No upstream investigation or contribution has started.
+Incoming HTTP and outgoing client spans have been observed in Jaeger, including two sequential sibling calls to Postman Echo. Outgoing trace context was verified through echoed headers and a matching client span ID. See [learning notes](projects/otel/learning-notes.md) and the [reproducible experiment](projects/otel/experiments.md). Receiving-side span creation in another instrumented service has not been tested. No upstream investigation or contribution has started.
 
 ## Learning and contribution milestones
 
@@ -15,7 +15,7 @@ Core tracing concepts have been discussed, and the first local HTTP trace has be
 5. **Investigate a focused behavior.** Explore an area such as JDBC instrumentation. Reproduce a specific behavior, inspect the relevant code, and write a focused test when appropriate.
 6. **Work toward an upstream contribution.** Select a suitable issue based on evidence and maintainer guidance. Prepare a focused change, run the required checks, and seek explicit approval before opening a pull request.
 
-Milestones 1 and 2 have an initial learning baseline and working experiment; deepen them through child spans and practical propagation. Milestones 3–6 remain ahead. None of this learning work is an upstream contribution. There is no fixed deadline or guaranteed issue or pull request outcome.
+Milestones 1 and 2 have an initial learning baseline and working experiment; child spans and outgoing context injection have now been exercised. Receiving-side and asynchronous propagation remain future learning topics. Milestones 3–6 remain ahead. None of this learning work is an upstream contribution. There is no fixed deadline or guaranteed issue or pull request outcome.
 
 ## Working approach
 
@@ -26,4 +26,4 @@ Milestones 1 and 2 have an initial learning baseline and working experiment; dee
 
 ## Next action
 
-Add one recorded child operation to the local application and inspect its parent relationship and timing under the HTTP span in Jaeger.
+For one new `/hello` request, compare the echoed `traceparent` span ID with the second HTTP client span in Jaeger.

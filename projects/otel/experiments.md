@@ -1,5 +1,7 @@
 # OpenTelemetry experiments
 
+The current application makes two sequential calls to Postman Echo. The first section preserves the initial single-span baseline; the second records the extension.
+
 ## 2026-11-18 — Trace a local Spring Boot HTTP request
 
 **Goal:** Run a small Java application with the OpenTelemetry Java agent and inspect a real request in Jaeger.
@@ -107,4 +109,71 @@ Use Ctrl+C in the Java terminal to stop the application and Ctrl+C in the attach
 - [Java telemetry configuration](https://opentelemetry.io/docs/languages/java/configuration/)
 - [Jaeger 2.23 getting started](https://www.jaegertracing.io/docs/2.23/getting-started/)
 
-**Single next action:** Add one recorded child operation and inspect its parent relationship and timing under the HTTP span.
+## 2026-11-18 — Outgoing HTTP calls and propagated context
+
+**Goal:** Observe automatically recorded HTTP client spans, verify outgoing trace context, and test whether sequential calls become sibling spans.
+
+### Application change and setup
+
+[HelloController.hello()](experiments/otel-demo/src/main/java/com/pipita/oteldemo/HelloController.java) now uses Java 17's built-in `HttpClient` to send two synchronous GET requests to:
+
+```text
+https://postman-echo.com/get?message=hello
+```
+
+Postman Echo is a public test API that returns request parameters and received headers. It needs no API key for this endpoint. Internet access is required; service availability and latency can vary. See [its documentation](https://learning.postman.com/docs/reference/developer-resources/echo-api/).
+
+The controller reuses one client, configures a 5-second connection timeout and a 10-second timeout per request, and returns the second response body. It currently lets `IOException` and `InterruptedException` propagate to Spring; explicit application error handling has not been explored.
+
+```java
+HttpResponse<String> first =
+        client.send(request, HttpResponse.BodyHandlers.ofString());
+
+HttpResponse<String> second =
+        client.send(request, HttpResponse.BodyHandlers.ofString());
+
+return second.body();
+```
+
+No manual span creation or additional telemetry dependency was added. The agent instruments the supported HTTP client operation, rather than treating every source statement as an operation to record.
+
+### Reproduce
+
+1. Keep Jaeger running through `docker compose up`.
+2. Stop the previous Java process with Ctrl+C.
+3. From `projects/otel/experiments/otel-demo`, run `./mvnw package`.
+4. Restart using the **Java command with the agent** above. Running a previously built JAR does not pick up source edits automatically.
+5. Open <http://localhost:8080/hello>. The response is now Postman Echo JSON, rather than the original greeting.
+6. Wait for export and find the newest `otel-demo` trace in Jaeger.
+
+### Observed progression
+
+The developer reported a successful build and confirmed the external response. Session screenshots showed:
+
+- With one outgoing call, a trace contained two spans: `GET /hello` and a child `GET`. The child had `server.address=postman-echo.com`; both requests showed HTTP 200.
+- In a selected one-call trace, the echoed header was `00-bb11f0a1de4dd382a4ead71d8e787b65-dba19004546330ae-03`. The child span's ID in Jaeger was **`dba19004546330ae`**, matching the header. This verified outgoing context injection and receipt by the echo service.
+- After adding the second call, an initial screenshot still showed only two spans. The source contained two calls; rebuilding and restarting was recommended. The subsequent screenshot showed the expected **three spans**, with **depth 2** and **one service**.
+
+The final screenshot showed:
+
+```text
+GET /hello                  709 ms
+├── First GET to Postman    402 ms; starts at 76.54 ms
+└── Second GET to Postman   201 ms; starts at 479.64 ms
+```
+
+Both client spans showed HTTP 200 and `server.address=postman-echo.com`. Their placement and timing demonstrate sequential sibling operations under the same HTTP parent. The parent duration already includes the child durations. Using the rounded displayed values, the calls account for 603 ms, leaving approximately 106 ms outside the client spans but inside the server span. The trace does not identify the cause of that remaining time.
+
+These timings are individual observations, not performance benchmarks. Both client spans belong to `otel-demo`; no Postman-internal spans were collected. The echoed header proves context receipt, not that Postman created a server span or exported it to our backend. The explicit span-kind field was not inspected.
+
+### VS Code troubleshooting
+
+VS Code initially reported: `HelloController.java is not on the classpath of project open-source-journey_1f880201, only syntax errors are reported`. This prevented full compiler diagnostics for the Maven project. The developer ran **Java: Import Java Projects into Workspace** and reported completion before continuing. A separate post-import type-error check was not recorded.
+
+### Evidence limits and stopping point
+
+Build success was reported by the developer; no build or runtime checks were rerun during this documentation update. Individual test results and trace JSON were not supplied, and screenshots remain session evidence rather than repository artifacts.
+
+The one-call header-to-span comparison is verified. Comparing the returned header with the **second** client span in the final two-call version was proposed but not completed before stopping.
+
+**Single next action:** For one new `/hello` request, compare the echoed `traceparent` span ID with the second HTTP client span in Jaeger.

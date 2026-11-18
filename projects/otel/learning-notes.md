@@ -95,5 +95,37 @@ Our first observed trace contains one `GET /hello` span with HTTP status `200`. 
 
 See [the experiment record](experiments.md) for versions, commands, and observations.
 
-**Single next action:** Add one recorded child operation and inspect its parent relationship and timing under the HTTP span.
+## 2026-11-18 — HTTP client instrumentation in practice
+
+The agent automatically recorded Java `HttpClient.send(...)` calls as outgoing HTTP client spans. It instruments supported library behavior; the assignment to a response variable and the `BodyHandlers.ofString()` expression do not each become spans.
+
+Two sequential sends produced sibling spans:
+
+```text
+GET /hello — server span A
+├── First outgoing GET — client span B
+└── Second outgoing GET — client span C
+```
+
+After the first synchronous call, instrumentation restores the previous current context. The second call therefore starts under A rather than B. Execution order alone does not determine span parenthood.
+
+### Read the propagated header
+
+Postman Echo returned this received header during the one-call experiment:
+
+```text
+00-bb11f0a1de4dd382a4ead71d8e787b65-dba19004546330ae-03
+```
+
+The hyphen-separated fields are version, trace ID, parent ID, and trace flags. Here, the trace ID is `bb11f0a1de4dd382a4ead71d8e787b65`, and the parent ID is `dba19004546330ae`. That parent ID matched our outgoing client span's SpanID in Jaeger. It is called the parent ID because a receiving server would use it as its parent; it is not the ID of our `/hello` server span.
+
+The flags value `03` has the sampled bit set. We have not investigated sampling behavior further.
+
+All spans in a trace share its trace ID but have distinct span IDs. In Jaeger, expanding a span exposes its SpanID at the bottom-right; the trace title shows a shortened trace ID, and the trace page URL contains the full ID. Compare identifiers from the same request: refreshing `/hello` normally creates another trace with new IDs.
+
+The echo response demonstrates that the header reached the external service. It does not expose that service's internal spans. Jaeger still showed one service, `otel-demo`, because both recorded spans came from our application.
+
+With two calls, the controller returns `second.body()`, so the echoed context should correspond to the second client span. That final comparison remains to be checked.
+
+**Single next action:** For one new `/hello` request, compare the echoed `traceparent` span ID with the second HTTP client span in Jaeger.
 
