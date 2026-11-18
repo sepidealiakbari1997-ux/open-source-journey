@@ -11,3 +11,12 @@ This repository will document:
 - Investigations, tests, and links to upstream issues or pull requests when available.
 
 Upstream source changes will live in separate project forks or clones. This repository records the learning process and evidence of work as it happens.
+
+## Current project
+
+The first local Spring Boot tracing experiment is working: the OpenTelemetry Java agent exports HTTP spans to Jaeger.
+
+- [Learning notes](projects/otel/learning-notes.md): operations, spans, context propagation, and instrumentation.
+- [Experiments](projects/otel/experiments.md): setup, versions, the Java agent startup command, and observations.
+- [Contribution status](projects/otel/contributions.md): preparation and remaining upstream work.
+- [Progress](PROGRESS.md) and [roadmap](ROADMAP.md): verified milestones and the next action.

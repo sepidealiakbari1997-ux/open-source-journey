@@ -2,6 +2,10 @@
 
 This journal tracks learning and progress toward meaningful open-source contributions. The initial target is **OpenTelemetry Java Instrumentation**; the plan will adapt to findings and upstream guidance.
 
+## Current position — 2026-11-18
+
+Core tracing concepts have been discussed, and the first local HTTP trace has been observed in Jaeger. See [learning notes](projects/otel/learning-notes.md) and the [reproducible experiment](projects/otel/experiments.md). Cross-service propagation is understood conceptually but has not been tested. No upstream investigation or contribution has started.
+
 ## Learning and contribution milestones
 
 1. **Understand observability fundamentals.** Learn the roles of traces, spans, context propagation, and instrumentation. Explain how spans represent work within a single request using a small Java example.
@@ -11,7 +15,7 @@ This journal tracks learning and progress toward meaningful open-source contribu
 5. **Investigate a focused behavior.** Explore an area such as JDBC instrumentation. Reproduce a specific behavior, inspect the relevant code, and write a focused test when appropriate.
 6. **Work toward an upstream contribution.** Select a suitable issue based on evidence and maintainer guidance. Prepare a focused change, run the required checks, and seek explicit approval before opening a pull request.
 
-These milestones describe intended work, not completed contributions. There is no fixed deadline or guaranteed issue or pull request outcome.
+Milestones 1 and 2 have an initial learning baseline and working experiment; deepen them through child spans and practical propagation. Milestones 3–6 remain ahead. None of this learning work is an upstream contribution. There is no fixed deadline or guaranteed issue or pull request outcome.
 
 ## Working approach
 
@@ -22,4 +26,4 @@ These milestones describe intended work, not completed contributions. There is n
 
 ## Next action
 
-Explain a trace and its spans through a small Java request-flow example, then check understanding before setting up an application.
+Add one recorded child operation to the local application and inspect its parent relationship and timing under the HTTP span in Jaeger.
