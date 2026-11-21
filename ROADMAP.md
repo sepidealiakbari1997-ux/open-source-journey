@@ -2,9 +2,9 @@
 
 This journal tracks learning and progress toward meaningful open-source contributions. The initial target is **OpenTelemetry Java Instrumentation**; the plan will adapt to findings and upstream guidance.
 
-## Current position — 2026-11-18
+## Current position — 2026-11-20
 
-Incoming HTTP and outgoing client spans have been observed in Jaeger, including two sequential sibling calls to Postman Echo. Outgoing trace context was verified through echoed headers and a matching client span ID. See [learning notes](projects/otel/learning-notes.md) and the [reproducible experiment](projects/otel/experiments.md). Receiving-side span creation in another instrumented service has not been tested. No upstream investigation or contribution has started.
+Incoming HTTP and outgoing client spans have been observed in Jaeger, including two sequential sibling calls to Postman Echo. Outgoing trace context was verified through echoed headers and a matching client span ID. See [learning notes](projects/otel/learning-notes.md) and the [reproducible experiment](projects/otel/experiments.md). Receiving-side span creation in another instrumented service has not been tested. The separate order-fulfillment experiment now includes database-backed Inventory stock handling and three developer-reported passing integration tests. Order-ID idempotency and the other services remain ahead. No upstream investigation or contribution has started.
 
 ## Learning and contribution milestones
 
@@ -26,4 +26,4 @@ Milestones 1 and 2 have an initial learning baseline and working experiment; chi
 
 ## Next action
 
-For one new `/hello` request, compare the echoed `traceparent` span ID with the second HTTP client span in Jaeger.
+Design a durable reservation record keyed by order ID, so repeat requests cannot deduct stock twice. See the [order fulfillment experiment](projects/otel/experiments/order-fulfillment/README.md) for the implemented stock slice and remaining design.

@@ -1,0 +1,18 @@
+services:
+  # ==========================
+  # Inventory Database (PostgreSQL)
+  # ==========================
+  inventory-db:
+    image: ${INVENTORY_DB_IMAGE_NAME}
+    environment:
+      POSTGRES_USER: ${INVENTORY_DB_USER}
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD}
+      POSTGRES_DB: ${INVENTORY_DB_NAME}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - inventory_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  inventory_data:

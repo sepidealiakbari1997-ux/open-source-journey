@@ -2,7 +2,43 @@
 
 ## Current stage
 
-Observed incoming HTTP and outgoing HTTP client spans in Jaeger. The application now makes two sequential calls to Postman Echo, producing sibling child spans. An echoed `traceparent` was matched to the outgoing client span in the one-call version. Receiving-side span creation in another instrumented service has not been exercised. No upstream investigation or contribution has been recorded.
+Observed incoming HTTP and outgoing HTTP client spans in Jaeger. The application now makes two sequential calls to Postman Echo, producing sibling child spans. An echoed `traceparent` was matched to the outgoing client span in the one-call version. Receiving-side span creation in another instrumented service has not been exercised. The order-fulfillment experiment now has an Inventory service connected to PostgreSQL, Flyway migrations, and three developer-reported passing stock integration tests. Order, Fulfillment, reservation idempotency, and messaging remain unimplemented. No upstream investigation or contribution has been recorded.
+
+## 2026-11-20 — Inventory stock persistence and concurrent deduction
+
+**Goal:** Establish database-backed stock handling before adding order-ID idempotency.
+
+**Work completed:**
+
+- Generated Inventory Service using Spring Boot 4.1.2 and Java 17 with Web, JPA, Validation, and PostgreSQL dependencies; added Flyway support.
+- Configured PostgreSQL 17 through Compose, local host port 5432, and a named data volume. Confirmed database/user `inventory` through `psql` output supplied by the developer.
+- Added the `Stock` entity, `StockRepository` with `PESSIMISTIC_WRITE`, and transactional `StockService.reserve()`. Quantity validation and the locked availability check precede deduction; JPA persists the change at commit.
+- Added V1 to create stock with a primary key and nonnegative quantity constraint, and V2 to seed `BOOK-JAVA=10` and `KEYBOARD-USB=5`. The developer supplied matching query results.
+- Created separate database `inventory_test` and a Spring `test` profile. Added tests for successful deduction, insufficient-stock rejection without quantity change, and ten competing reservation attempts.
+
+**Commands and outcomes:** `docker compose config --quiet` was previously run by the assistant and passed. The developer confirmed PostgreSQL readiness and application startup. The developer ran `./mvnw -Dtest=StockServiceTest test` and reported `Tests run: 3, Failures: 0, Errors: 0, Skipped: 0`. The assistant reviewed the source but did not rerun these tests during this documentation update.
+
+**Learning:** Named volumes preserve database files independently of containers. Compose environment substitution and Spring configuration imports are separate mechanisms. Flyway applies versioned migrations before Hibernate schema validation. Editing an applied V1 caused a checksum mismatch during a deliberate experiment; the disposable stock table and migration history were reset locally, then migrations reran successfully. This reset is not a shared-database migration practice. Maven's test phase, test-class selection, and Spring profiles serve different purposes.
+
+**Observed test behavior:** The concurrency test starts ten threads, each requesting two of eleven units, and asserts five successes, five rejections, and one remaining unit. It waits for worker termination before assertions and cleanup, failing on timeout or interrupted waiting. Start coordination does not guarantee overlapping database transactions; this passing run supports the observed no-overselling outcome, not deterministic proof of lock contention. The rejection test does not exercise rollback after mutation because rejection happens before deduction.
+
+**Open questions:** No durable reservation decisions, order-ID uniqueness, HTTP reservation API, retries, messaging, or tracing of Inventory have been implemented. Controlled lock-contention testing and invalid-quantity/unknown-SKU coverage remain future work. The current stock deduction method is not idempotent.
+
+**Single next action:** Design a durable reservation record keyed by order ID, so repeat requests cannot deduct stock twice.
+
+## 2026-11-18 — Design a separate order fulfillment experiment
+
+**Goal:** Plan three independent services connected by HTTP and RabbitMQ, orchestrated together with Docker Compose.
+
+**Work completed:** Added the [order fulfillment design](projects/otel/experiments/order-fulfillment/README.md). It specifies Order, Inventory, and Fulfillment responsibilities; HTTP and event contracts; planned container layout; propagation questions; reliability limitations; and staged implementation. The existing `otel-demo` remains the baseline. No new service code or container configuration exists yet.
+
+**Verification:** Documentation only; no application build, Compose stack, or service tests were run for this new experiment.
+
+**Learning/design decisions:** Keep independent Maven builds under one experiment directory, with shared Docker orchestration. Distinguish reservation acceptance, broker confirmation, and asynchronous shipment creation. Record messaging span relationships from evidence rather than assuming them.
+
+**Open questions:** Review contracts before implementation; select and verify tool/library/image versions. In-memory state and non-atomic reservation/publication are explicit initial limitations. The earlier second-client header comparison remains optional unfinished baseline work; the new experiment is now the chosen direction.
+
+**Single next action:** Review the API and event contracts, then scaffold Inventory Service as its own Maven project.
 
 ## 2026-11-18 — Outgoing HTTP spans and context propagation
 
